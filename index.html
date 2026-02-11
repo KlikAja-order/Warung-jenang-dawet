@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MAK UPANG | Express</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --red: #BE123C; --yellow: #FACC15; --dark: #451A03; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #FFFBF0; color: var(--dark); touch-action: manipulation; }
+
+        header {
+            position: fixed; top: 0; width: 100%; z-index: 50;
+            background: var(--red); color: white;
+            padding: 12px 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding: 130px 12px 180px 12px;
+            max-width: 1000px; margin: 0 auto;
+        }
+
+        .menu-card {
+            background: white; border-radius: 20px; padding: 12px;
+            border: 1px solid #FDE68A; display: flex; flex-direction: column;
+            justify-content: space-between; transition: 0.2s;
+        }
+
+        .tabs-container {
+            position: fixed; top: 56px; width: 100%; z-index: 40;
+            background: rgba(255, 251, 240, 0.95);
+            backdrop-filter: blur(8px); padding: 10px 0;
+            border-bottom: 1px solid #FEF3C7;
+        }
+
+        .tab-btn {
+            padding: 6px 16px; border-radius: 12px; font-size: 12px; font-weight: 800;
+            white-space: nowrap; transition: 0.3s; border: 1px solid #FDE68A;
+            background: white; color: var(--dark);
+        }
+
+        .tab-btn.active { background: var(--yellow); border-color: var(--yellow); }
+
+        .bottom-bar {
+            position: fixed; bottom: 0; width: 100%; z-index: 60;
+            background: white; padding: 16px;
+            border-top: 1px solid #E5E7EB;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+        }
+
+        .qty-ctrl {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #F3F4F6; border-radius: 12px; padding: 2px;
+        }
+
+        /* Styling Struk Digital */
+        #receipt-modal {
+            font-family: 'Courier Prime', monospace;
+            display: none;
+            position: fixed; inset: 0; z-index: 100;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+
+        .receipt-paper {
+            background: white; width: 100%; max-width: 350px;
+            padding: 24px; border-radius: 4px;
+            position: relative; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        .receipt-paper::after {
+            content: ""; position: absolute; bottom: -10px; left: 0; width: 100%; height: 10px;
+            background: linear-gradient(-45deg, white 5px, transparent 0), linear-gradient(45deg, white 5px, transparent 0);
+            background-size: 10px 10px;
+        }
+
+        @media (min-width: 768px) { .menu-grid { grid-template-columns: repeat(3, 1fr); } }
+    </style>
+</head>
+<body>
+
+<header class="flex justify-between items-center">
+    <div class="flex items-center gap-2">
+        <span class="text-xl">🍭</span>
+        <div>
+            <h1 class="text-sm font-black tracking-tight leading-none uppercase">Warung Mak Upang</h1>
+            <p class="text-[8px] font-bold text-rose-200">Wonosari, Gunungkidul</p>
+        </div>
+    </div>
+    <div class="text-[10px] bg-yellow-400 text-red-900 px-2 py-1 rounded-full font-black">BUKA</div>
+</header>
+
+<div class="tabs-container overflow-x-auto flex gap-2 px-4">
+    <button onclick="filterMenu('Semua', this)" class="tab-btn active">Semua</button>
+    <button onclick="filterMenu('Makanan', this)" class="tab-btn">Makanan</button>
+    <button onclick="filterMenu('Minuman', this)" class="tab-btn">Minuman</button>
+    <button onclick="filterMenu('Camilan', this)" class="tab-btn">Camilan</button>
+</div>
+
+<main id="menu-container" class="menu-grid"></main>
+
+<div class="max-w-md mx-auto px-4 pb-48">
+    <div class="bg-white p-5 rounded-[24px] border border-yellow-200 shadow-sm space-y-3">
+        <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Data Penerima</h3>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+            <button id="pickup" onclick="setDelivery(false)" class="py-3 rounded-xl border-2 border-red-600 bg-red-50 text-red-600 text-[10px] font-black">AMBIL SENDIRI</button>
+            <button id="delivery" onclick="setDelivery(true)" class="py-3 rounded-xl border-2 border-slate-100 bg-slate-50 text-slate-400 text-[10px] font-black flex flex-col items-center leading-tight">
+                <span>DELIVERY</span>
+                <span class="text-[9px] font-extrabold text-red-500">(+5rb)</span>
+            </button>
+        </div>
+        <input type="text" id="cust-name" placeholder="Nama Lengkap" class="w-full p-3 rounded-xl bg-slate-50 border-none text-xs font-bold outline-none focus:ring-2 focus:ring-yellow-400">
+        <textarea id="cust-address" placeholder="Alamat Lengkap / No Meja" class="w-full p-3 rounded-xl bg-slate-50 border-none text-xs font-bold outline-none focus:ring-2 focus:ring-yellow-400"></textarea>
+    </div>
+</div>
+
+<div id="receipt-modal">
+    <div class="receipt-paper">
+        <div class="text-center border-b-2 border-dashed border-slate-300 pb-4 mb-4">
+            <h2 class="font-bold text-lg">MAK UPANG</h2>
+            <p class="text-[10px]">Wonosari, Gunungkidul</p>
+            <p id="r-date" class="text-[9px] opacity-60"></p>
+        </div>
+        
+        <div id="r-items" class="text-xs space-y-1 mb-4"></div>
+        
+        <div class="border-t-2 border-dashed border-slate-300 pt-4 space-y-1 text-xs">
+            <div class="flex justify-between"><span>Subtotal</span><span id="r-subtotal"></span></div>
+            <div id="r-shipping-row" class="flex justify-between"><span>Ongkir</span><span id="r-shipping"></span></div>
+            <div class="flex justify-between font-bold text-sm pt-2 border-t border-slate-100">
+                <span>TOTAL</span><span id="r-total"></span>
+            </div>
+        </div>
+
+        <div class="mt-6 text-[10px] text-center bg-slate-100 p-2 rounded">
+            Metode: <span id="r-method" class="font-bold"></span><br>
+            Nama: <span id="r-name" class="font-bold"></span>
+        </div>
+
+        <div class="flex gap-2 mt-4">
+            <button onclick="closeReceipt()" class="flex-1 py-3 bg-slate-200 rounded-lg text-[10px] font-bold">BATAL</button>
+            <button onclick="executeKirimWA()" class="flex-1 py-3 bg-red-600 text-white rounded-lg text-[10px] font-bold tracking-wider">KIRIM WA</button>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <div class="max-w-xl mx-auto flex items-center justify-between gap-4">
+        <div>
+            <p class="text-[9px] font-black text-slate-400 uppercase leading-none mb-1">Total</p>
+            <p id="total-price" class="text-xl font-black text-red-700">Rp 0</p>
+        </div>
+        <button onclick="showReceipt()" class="flex-1 bg-red-700 text-white py-4 rounded-2xl font-black text-xs shadow-lg flex items-center justify-center gap-2">
+            PROSES PESANAN
+        </button>
+    </div>
+</div>
+
+<script>
+const NOMOR_WA="6288216298339";
+const ONGKIR=5000;
+let deliveryMode=false;
+let keranjang={};
+let catatanGlobal={};
+
+const menuData=[
+    {name:"Lotek Spesial",price:10000,category:"Makanan",icon:"🥗"},
+    {name:"Lotek Lontong",price:12000,category:"Makanan",icon:"🍱"},
+    {name:"Jenang Dawet",price:7000,category:"Minuman",icon:"🥣"},
+    {name:"Es Dawet Ayun",price:5000,category:"Minuman",icon:"🍹"},
+    {name:"Jenang Sum Sum",price:7000,category:"Minuman",icon:"🥛"},
+    {name:"Jenang Mutiara",price:7000,category:"Minuman",icon:"🍧"},
+    {name:"Gorengan Anget",price:1000,category:"Camilan",icon:"🍪"},
+    {name:"Es Teh Manis",price:3000,category:"Minuman",icon:"🧊"}
+];
+
+function renderMenu(filter="Semua"){
+    const container=document.getElementById('menu-container');
+    const filtered=filter==="Semua"?menuData:menuData.filter(i=>i.category===filter);
+    container.innerHTML=filtered.map(item=>{
+        const qty=keranjang[item.name]||0;
+        return `
+        <div class="menu-card">
+            <div><span class="text-xl">${item.icon}</span><h3 class="text-[11px] font-extrabold mt-1">${item.name}</h3><p class="text-red-700 font-black text-xs">Rp ${item.price.toLocaleString()}</p></div>
+            <div class="mt-2">
+                <div class="qty-ctrl"><button onclick="updateQty('${item.name}',-1)" class="w-8 h-8 font-black text-red-600">-</button><span class="text-xs font-black">${qty}</span><button onclick="updateQty('${item.name}',1)" class="w-8 h-8 bg-yellow-400 rounded-lg font-black">+</button></div>
+                ${qty>0?`<input type="text" oninput="saveNote('${item.name}',this.value)" placeholder="Note.." value="${catatanGlobal[item.name]||''}" class="w-full text-[9px] p-1.5 bg-yellow-50 rounded-md border border-yellow-200 font-bold mt-1">`:''}
+            </div>
+        </div>`}).join('');
+}
+
+function saveNote(name,val){catatanGlobal[name]=val;}
+function filterMenu(cat,el){document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active')); el.classList.add('active'); renderMenu(cat);}
+function updateQty(name,delta){keranjang[name]=Math.max(0,(keranjang[name]||0)+delta); updateSummary(); renderMenu(document.querySelector('.tab-btn.active').innerText);}
+function setDelivery(mode){deliveryMode=mode; updateSummary(); document.getElementById("pickup").style.borderColor=mode?"#E5E7EB":"#BE123C"; document.getElementById("delivery").style.borderColor=mode?"#BE123C":"#E5E7EB";}
+function updateSummary(){
+    let total=0; Object.entries(keranjang).forEach(([n,q])=>{if(q>0) total+=menuData.find(m=>m.name===n).price*q;});
+    if(deliveryMode&&total>0) total+=ONGKIR;
+    document.getElementById('total-price').innerText=`Rp ${total.toLocaleString()}`;
+}
+
+function showReceipt(){
+    const nama=document.getElementById('cust-name').value;
+    const alamat=document.getElementById('cust-address').value;
+    if(!nama||!alamat){alert("Isi Nama & Alamat dulu ya!"); return;}
+    
+    let html=""; let sub=0;
+    Object.entries(keranjang).forEach(([n,q])=>{
+        if(q>0){
+            const item=menuData.find(m=>m.name===n);
+            sub+=item.price*q;
+            html+=`<div class="flex justify-between"><span>${n} x${q}</span><span>${(item.price*q).toLocaleString()}</span></div>`;
+        }
+    });
+    if(sub===0){alert("Pilih menu dulu!"); return;}
+
+    document.getElementById('r-date').innerText=new Date().toLocaleString('id-ID');
+    document.getElementById('r-items').innerHTML=html;
+    document.getElementById('r-subtotal').innerText=sub.toLocaleString();
+    document.getElementById('r-shipping-row').style.display=deliveryMode?'flex':'none';
+    document.getElementById('r-shipping').innerText=ONGKIR.toLocaleString();
+    document.getElementById('r-total').innerText=(deliveryMode?sub+ONGKIR:sub).toLocaleString();
+    document.getElementById('r-name').innerText=nama;
+    document.getElementById('r-method').innerText=deliveryMode?"Delivery":"Ambil Sendiri";
+    document.getElementById('receipt-modal').style.display='flex';
+}
+
+function closeReceipt(){document.getElementById('receipt-modal').style.display='none';}
+
+function executeKirimWA(){
+    const nama=document.getElementById('cust-name').value;
+    const alamat=document.getElementById('cust-address').value;
+    let detail=""; let sub=0;
+    Object.entries(keranjang).forEach(([n,q])=>{
+        if(q>0){
+            const item=menuData.find(m=>m.name===n);
+            sub+=item.price*q;
+            const note=catatanGlobal[n]?` _(${catatanGlobal[n]})_` : "";
+            detail+=`✅ *${n}* x${q}${note}\n`;
+        }
+    });
+    
+    const total=deliveryMode?sub+ONGKIR:sub;
+    const pesan=`*STRUK PESANAN - MAK UPANG*\n---------------------------------------\n👤 *PELANGGAN*\nNama: ${nama}\nMetode: ${deliveryMode?"Delivery Service":"Ambil di Lokasi"}\nLokasi: ${alamat}\n\n🛒 *DAFTAR PESANAN*\n${detail}\n---------------------------------------\n💰 *RINCIAN BIAYA*\nSubtotal: Rp ${sub.toLocaleString()}\n${deliveryMode?`Ongkir: Rp ${ONGKIR.toLocaleString()}\n`:""}*TOTAL: Rp ${total.toLocaleString()}*\n---------------------------------------\n\n_Mohon instruksi pembayarannya ya Mak!_`;
+    
+    window.open(`https://wa.me/${NOMOR_WA}?text=${encodeURIComponent(pesan)}`);
+    closeReceipt();
+}
+
+renderMenu();
+</script>
+</body>
+</html>
